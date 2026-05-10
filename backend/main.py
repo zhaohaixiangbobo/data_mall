@@ -18,7 +18,7 @@ def seed_data():
     db = SessionLocal()
     try:
         if db.query(models.App).count() == 0:
-            excel_path = "d:/2-code/mall/import_template_v2.xlsx"
+            excel_path = "d:/2-code/mall/import_template_v3.xlsx"
             if os.path.exists(excel_path):
                 # 导入 Apps
                 df_apps = pd.read_excel(excel_path, sheet_name="apps")
@@ -38,6 +38,8 @@ def seed_data():
                         domain=row["domain"],
                         description=row["description"],
                         img_url=row["img_url"],
+                        link=row.get("link", ""),
+                        features=row.get("features", ""),
                         visits=int(row["visits"]),
                         promotion_times=int(row["promotion_times"]),
                         created_at=created_at
@@ -89,15 +91,17 @@ app.add_middleware(
 
 @app.get("/api/filters")
 def get_filters(db: Session = Depends(get_db)):
-    """获取所有可用的单位 (units) 和业务领域 (domains)"""
-    units = [r[0] for r in db.query(models.App.unit).distinct().all()]
-    domains = [r[0] for r in db.query(models.App.domain).distinct().all()]
-    return {"units": units, "domains": domains}
+    """获取所有可用的单位 (units)、业务领域 (domains) 和特点 (features)"""
+    units = ["市局", "一局", "二局", "三局", "东丽", "西青", "津南", "北辰", "滨海", "宝坻", "武清", "蓟县", "静海", "宁河"]
+    domains = ["专卖", "营销", "物流", "办公室",  "综合计划", "内管",  "法规", "财务", "审计", "人事", "党建", "安全", "群团", "服务中心", "信息中心", "学会", "规范"]
+    features = ["业务线上化","业务规范化","数据可视化","管理协同","系统对接"]
+    return {"units": units, "domains": domains, "features": features}
 
 @app.get("/api/apps", response_model=list[schemas.App])
 def get_apps(
     unit: str = Query(None, description="按单位过滤"),
     domain: str = Query(None, description="按业务领域过滤"),
+    feature: str = Query(None, description="按特点过滤"),
     search: str = Query(None, description="搜索应用名称"),
     db: Session = Depends(get_db)
 ):
@@ -107,14 +111,21 @@ def get_apps(
         query = query.filter(models.App.unit == unit)
     if domain:
         query = query.filter(models.App.domain == domain)
+    if feature:
+        query = query.filter(models.App.features.contains(feature))
     if search:
         query = query.filter(models.App.name.contains(search))
     return query.all()
 
-@app.get("/api/ranking", response_model=list[schemas.App])
-def get_ranking(db: Session = Depends(get_db)):
-    """获取访问量排名前 15 的应用"""
-    return db.query(models.App).order_by(models.App.visits.desc()).limit(15).all()
+@app.get("/api/ranking")
+def get_ranking(type: str = Query("comprehensive", description="排行榜类型：visits 或 comprehensive"), db: Session = Depends(get_db)):
+    """获取排名前 10 的应用，支持综合榜和访问量榜"""
+    if type == "visits":
+        apps = db.query(models.App).order_by(models.App.visits.desc()).limit(10).all()
+    else:
+        # 综合榜：访问量和推广次数加权
+        apps = db.query(models.App).order_by((models.App.visits + models.App.promotion_times * 10).desc()).limit(10).all()
+    return apps
 
 @app.get("/api/stats")
 def get_stats(db: Session = Depends(get_db)):

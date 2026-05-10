@@ -32,7 +32,7 @@ const PieWithTable = ({ title, data, colors }: { title: string, data: {name: str
   const startIndex = page * pageSize;
 
   const option = {
-    title: { text: title, left: 'center', top: 0, textStyle: { fontSize: 16, fontWeight: 'normal' } },
+    title: { text: title, left: 'center', top: 0, textStyle: { fontSize: 16, fontWeight: 'bold' } },
     tooltip: { trigger: 'item', formatter: '{a} <br/>{b} : {c} ({d}%)' },
     color: colors,
     series: [
@@ -40,7 +40,7 @@ const PieWithTable = ({ title, data, colors }: { title: string, data: {name: str
         name: title,
         type: 'pie',
         radius: ['35%', '65%'],
-        center: ['28%', '55%'], // 左移饼图给表格留空间
+        center: ['22%', '55%'], // 进一步左移饼图给表格留空间
         avoidLabelOverlap: true,
         itemStyle: {
           borderRadius: 4,
@@ -71,7 +71,7 @@ const PieWithTable = ({ title, data, colors }: { title: string, data: {name: str
       </div>
       
       {/* 右侧表格区域 */}
-      <div className="absolute right-4 top-12 w-[55%] bg-white/95 z-10 flex flex-col rounded shadow-sm border border-gray-50">
+      <div className="absolute right-4 top-12 w-[55%] xl:w-[50%] bg-white/95 z-10 flex flex-col rounded shadow-sm border border-gray-50">
         <table className="w-full text-xs text-left text-gray-500 table-fixed">
           <thead className="text-gray-700 bg-gray-50/80 border-b border-gray-100">
             <tr>
@@ -100,12 +100,20 @@ const PieWithTable = ({ title, data, colors }: { title: string, data: {name: str
         </table>
         
         {totalPages > 1 && (
-          <div className="my-2 flex justify-center">
+          <div className="my-2 flex justify-center items-center space-x-3 text-xs text-gray-500">
+            <button 
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="p-1 hover:text-teal-500 disabled:opacity-30 disabled:hover:text-gray-500 cursor-pointer"
+            >
+              &lt; 上一页
+            </button>
+            <span>{page + 1} / {totalPages}</span>
             <button 
               onClick={handleNextPage}
-              className="px-4 py-1 text-xs bg-teal-400 hover:bg-teal-500 text-white rounded-full transition-colors shadow-sm"
+              className="p-1 hover:text-teal-500 cursor-pointer"
             >
-              查看更多 &gt;
+              下一页 &gt;
             </button>
           </div>
         )}
@@ -121,7 +129,7 @@ const Charts: React.FC<ChartsProps> = ({ data }) => {
 
   // 新增趋势折线图配置
   const trendOption = {
-    title: { text: '应用新增趋势', left: 'center', top: 0, textStyle: { fontSize: 16, fontWeight: 'normal' } },
+    title: { text: '应用新增趋势', left: 'center', top: 0, textStyle: { fontSize: 16, fontWeight: 'bold' } },
     tooltip: { trigger: 'axis' },
     grid: { left: '3%', right: '4%', bottom: '3%', top: '20%', containLabel: true },
     xAxis: {

@@ -8,6 +8,8 @@ class AppBase(BaseModel):
     domain: str
     description: Optional[str] = None
     img_url: Optional[str] = None
+    link: Optional[str] = None
+    features: Optional[str] = None
     visits: int = 0
     promotion_times: int = 0
 

@@ -21,18 +21,24 @@ export const getFilters = async (): Promise<Filters> => {
  * @param search - 可选，按名称搜索
  * @returns 匹配的应用数组的 Promise
  */
-export const getApps = async (unit?: string, domain?: string, search?: string): Promise<AppData[]> => {
-  const params = { unit, domain, search };
-  const { data } = await api.get<AppData[]>('/apps', { params });
+export const getApps = async (unit?: string, domain?: string, feature?: string, search?: string): Promise<AppData[]> => {
+  const params = new URLSearchParams();
+  if (unit) params.append('unit', unit);
+  if (domain) params.append('domain', domain);
+  if (feature) params.append('feature', feature);
+  if (search) params.append('search', search);
+
+  const { data } = await api.get<AppData[]>(`/apps?${params.toString()}`);
   return data;
 };
 
 /**
- * 获取访问量排名前15的应用
- * @returns 排名应用数组的 Promise
+ * 获取排名前 15 的应用
+ * @param type 排行榜类型：visits 或 comprehensive
+ * @returns 应用数组的 Promise
  */
-export const getRanking = async (): Promise<AppData[]> => {
-  const { data } = await api.get<AppData[]>('/ranking');
+export const getRanking = async (type: 'visits' | 'comprehensive' = 'comprehensive'): Promise<AppData[]> => {
+  const { data } = await api.get<AppData[]>(`/ranking?type=${type}`);
   return data;
 };
 

@@ -4,10 +4,13 @@ import random
 
 def generate_excel():
     """生成带有模拟数据的 Excel 模板文件"""
-    domains = ["营销", "物流", "专卖", "办公室", "财务", "党建", "人事", "其他"]
-    units = ["滨海", "一局", "二局", "三局", "东丽", "西青", "津南", "北辰", "宝坻", "武清", "蓟县", "静海", "宁河", "市局"]
-    
+    domains = ["专卖", "营销", "物流", "办公室",  "综合计划", "内管",  "法规", "财务", "审计", "人事", "党建", "安全", "群团", "服务中心", "信息中心", "学会", "规范"]
+    units = ["市局", "一局", "二局", "三局", "东丽", "西青", "津南", "北辰", "滨海", "宝坻", "武清", "蓟县", "静海", "宁河"]
+    values = ["业务线上化","业务规范化","数据可视化","管理协同","系统对接"]
+
     app_data = []
+
+
     now = datetime.now()
     
     # 模拟过去一年的数据
@@ -19,6 +22,8 @@ def generate_excel():
             "domain": random.choice(domains),
             "description": f"这是应用_{i}的描述信息",
             "img_url": f"https://picsum.photos/seed/{i}/200",
+            "link": f"https://example.com/app/{i}",
+            "features": ",".join(random.sample(values, random.randint(1, len(values)))),
             "visits": 0, # 将由明细数据汇总
             "promotion_times": random.randint(0, 50),
             "created_at": (now - timedelta(days=random.randint(0, 360))).strftime("%Y-%m-%d %H:%M:%S")
@@ -51,7 +56,7 @@ def generate_excel():
     df_apps = pd.DataFrame(app_data)
     df_daily_stats = pd.DataFrame(daily_stats_data)
     
-    with pd.ExcelWriter("d:/2-code/mall/import_template_v2.xlsx", engine="openpyxl") as writer:
+    with pd.ExcelWriter("d:/2-code/mall/import_template_v3.xlsx", engine="openpyxl") as writer:
         df_apps.to_excel(writer, sheet_name="apps", index=False)
         df_daily_stats.to_excel(writer, sheet_name="daily_stats", index=False)
         

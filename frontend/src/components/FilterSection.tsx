@@ -6,9 +6,11 @@ interface FilterSectionProps {
   filters: Filters;
   selectedUnit: string;
   selectedDomain: string;
+  selectedFeature: string;
   searchQuery: string;
   onUnitChange: (unit: string) => void;
   onDomainChange: (domain: string) => void;
+  onFeatureChange: (feature: string) => void;
   onSearchChange: (query: string) => void;
 }
 
@@ -16,9 +18,11 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   filters,
   selectedUnit,
   selectedDomain,
+  selectedFeature,
   searchQuery,
   onUnitChange,
   onDomainChange,
+  onFeatureChange,
   onSearchChange,
 }) => {
   return (
@@ -105,6 +109,38 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             ))}
           </div>
         </div>
+        {/* 特点过滤 */}
+        {filters.features && filters.features.length > 0 && (
+          <div className="flex items-start pt-2 border-t border-gray-50">
+            <div className="flex-shrink-0 pt-1">
+              <button
+                onClick={() => onFeatureChange('')}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  selectedFeature === ''
+                    ? 'bg-teal-400 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                全部特点
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2 ml-4">
+              {filters.features.map((feature) => (
+                <button
+                  key={feature}
+                  onClick={() => onFeatureChange(feature)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    selectedFeature === feature
+                      ? 'bg-teal-400 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {feature}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

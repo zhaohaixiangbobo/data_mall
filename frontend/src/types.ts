@@ -5,6 +5,8 @@ export interface AppData {
   domain: string;
   description: string;
   img_url: string;
+  link: string;
+  features: string;
   visits: number;
   promotion_times: number;
   created_at: string;
@@ -13,6 +15,7 @@ export interface AppData {
 export interface Filters {
   units: string[];
   domains: string[];
+  features: string[];
 }
 
 export interface Stats {

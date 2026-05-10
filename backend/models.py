@@ -12,6 +12,8 @@ class App(Base):
     domain = Column(String, index=True)
     description = Column(String)
     img_url = Column(String)
+    link = Column(String)
+    features = Column(String)
     visits = Column(Integer, default=0)
     promotion_times = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
