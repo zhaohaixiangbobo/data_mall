@@ -50,3 +50,20 @@ export const getStats = async (): Promise<Stats> => {
   const { data } = await api.get<Stats>('/stats');
   return data;
 };
+
+export const login = async (username: string, password: string): Promise<{ access_token: string; token_type: string }> => {
+  const { data } = await api.post('/auth/login', { username, password });
+  return data;
+};
+
+export const uploadExcel = async (
+  file: File,
+  token: string
+): Promise<{ message: string; apps: number; monthly_stats: number }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await api.post('/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` },
+  });
+  return data;
+};

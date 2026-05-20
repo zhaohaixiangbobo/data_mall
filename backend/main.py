@@ -1,73 +1,130 @@
-from fastapi import FastAPI, Depends, Query
+from fastapi import FastAPI, Depends, Query, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
 import pandas as pd
 import os
+import shutil
 from datetime import datetime
 from contextlib import asynccontextmanager
+from typing import Optional
+from pydantic import BaseModel
+from jose import jwt, JWTError
+from dotenv import load_dotenv
 
 from database import engine, get_db, Base, SessionLocal
 import models
 import schemas
 
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+
 models.Base.metadata.create_all(bind=engine)
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+DEFAULT_EXCEL_PATH = os.path.join(DATA_DIR, "import_template.xlsx")
+LATEST_EXCEL_PATH = os.path.join(DATA_DIR, "latest.xlsx")
+
+JWT_SECRET_KEY = os.environ.get("MALL_JWT_SECRET", "mall-dev-secret")
+JWT_ALGORITHM = "HS256"
+AUTH_USERNAME = os.environ.get("MALL_ADMIN_USERNAME", "admin")
+AUTH_PASSWORD = os.environ.get("MALL_ADMIN_PASSWORD", "admin123")
+http_bearer = HTTPBearer(auto_error=False)
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+def _create_access_token(username: str) -> str:
+    payload = {
+        "sub": username,
+        "iat": int(datetime.utcnow().timestamp()),
+    }
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+def _require_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer)) -> str:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(status_code=401, detail="未登录")
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        username = payload.get("sub")
+        if username != AUTH_USERNAME:
+            raise HTTPException(status_code=401, detail="无效用户")
+        return username
+    except JWTError:
+        raise HTTPException(status_code=401, detail="无效 Token")
+
+def _get_excel_path() -> Optional[str]:
+    if os.path.exists(LATEST_EXCEL_PATH):
+        return LATEST_EXCEL_PATH
+    if os.path.exists(DEFAULT_EXCEL_PATH):
+        return DEFAULT_EXCEL_PATH
+    return None
+
+def _seed_from_excel(excel_path: str, db: Session) -> None:
+    df_apps = pd.read_excel(excel_path, sheet_name="apps")
+    for _, row in df_apps.iterrows():
+        created_at = row.get("created_at")
+        if pd.isna(created_at):
+            created_at = datetime.utcnow()
+        elif isinstance(created_at, str):
+            created_at = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
+        elif isinstance(created_at, pd.Timestamp):
+            created_at = created_at.to_pydatetime()
+
+        app_data = models.App(
+            id=int(row["id"]),
+            name=row["name"],
+            unit=row["unit"],
+            domain=row["domain"],
+            description=row["description"],
+            img_url=row["img_url"],
+            link=row.get("link", ""),
+            features=row.get("features", ""),
+            visits=int(row.get("visits", 0)),
+            data_amount=int(row.get("data_amount", 0)),
+            created_at=created_at
+        )
+        db.add(app_data)
+
+    try:
+        df_monthly = pd.read_excel(excel_path, sheet_name="monthly_stats")
+        for _, row in df_monthly.iterrows():
+            month_value = row.get("month")
+            if pd.isna(month_value):
+                continue
+            month_str = str(month_value)
+            monthly_row = models.MallMonthlyStat(
+                month=month_str,
+                new_data_amount=int(row.get("new_data_amount", 0)),
+                new_visitors=int(row.get("new_visitors", 0)),
+            )
+            db.add(monthly_row)
+    except Exception as e:
+        print(f"导入 monthly_stats 失败或不存在: {e}")
 
 def seed_data():
     """读取 Excel 文件并在数据库为空时注入模拟数据"""
     db = SessionLocal()
     try:
-        if db.query(models.App).count() == 0:
-            excel_path = "d:/2-code/mall/import_template_v3.xlsx"
-            if os.path.exists(excel_path):
-                # 导入 Apps
-                df_apps = pd.read_excel(excel_path, sheet_name="apps")
-                for _, row in df_apps.iterrows():
-                    created_at = row.get("created_at")
-                    if pd.isna(created_at):
-                        created_at = datetime.utcnow()
-                    elif isinstance(created_at, str):
-                        created_at = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
-                    elif isinstance(created_at, pd.Timestamp):
-                        created_at = created_at.to_pydatetime()
+        excel_path = _get_excel_path()
+        if not excel_path:
+            return
 
-                    app_data = models.App(
-                        id=int(row["id"]),
-                        name=row["name"],
-                        unit=row["unit"],
-                        domain=row["domain"],
-                        description=row["description"],
-                        img_url=row["img_url"],
-                        link=row.get("link", ""),
-                        features=row.get("features", ""),
-                        visits=int(row["visits"]),
-                        promotion_times=int(row["promotion_times"]),
-                        created_at=created_at
-                    )
-                    db.add(app_data)
-                
-                # 导入 Daily Stats
-                try:
-                    df_stats = pd.read_excel(excel_path, sheet_name="daily_stats")
-                    for _, row in df_stats.iterrows():
-                        stat_date = row.get("stat_date")
-                        if isinstance(stat_date, str):
-                            stat_date = datetime.strptime(stat_date, "%Y-%m-%d").date()
-                        elif isinstance(stat_date, pd.Timestamp):
-                            stat_date = stat_date.date()
-                            
-                        stat_data = models.AppDailyStat(
-                            app_id=int(row["app_id"]),
-                            stat_date=stat_date,
-                            visits=int(row["visits"]),
-                            visitors=int(row["visitors"])
-                        )
-                        db.add(stat_data)
-                except Exception as e:
-                    print(f"导入 daily_stats 失败或不存在: {e}")
-                
-                db.commit()
-                print("数据库已通过 Excel 数据种子初始化")
+        try:
+            apps_count = db.query(models.App).count()
+            monthly_count = db.query(models.MallMonthlyStat).count()
+        except Exception:
+            Base.metadata.drop_all(bind=engine)
+            Base.metadata.create_all(bind=engine)
+            apps_count = 0
+            monthly_count = 0
+
+        if apps_count == 0 and monthly_count == 0:
+            _seed_from_excel(excel_path, db)
+            db.commit()
+            print("数据库已通过 Excel 数据种子初始化")
     except Exception as e:
         print(f"数据注入失败: {e}")
     finally:
@@ -89,11 +146,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.post("/api/auth/login")
+def login(req: LoginRequest):
+    if req.username != AUTH_USERNAME or req.password != AUTH_PASSWORD:
+        raise HTTPException(status_code=401, detail="用户名或密码错误")
+    token = _create_access_token(req.username)
+    return {"access_token": token, "token_type": "bearer"}
+
 @app.get("/api/filters")
 def get_filters(db: Session = Depends(get_db)):
     """获取所有可用的单位 (units)、业务领域 (domains) 和特点 (features)"""
-    units = ["市局", "一局", "二局", "三局", "东丽", "西青", "津南", "北辰", "滨海", "宝坻", "武清", "蓟县", "静海", "宁河"]
-    domains = ["专卖", "营销", "物流", "办公室",  "综合计划", "内管",  "法规", "财务", "审计", "人事", "党建", "安全", "群团", "服务中心", "信息中心", "学会", "规范"]
+    units = ["市局", "一局", "二局", "三局", "东丽", "西青", "津南", "北辰", "滨海", "宝坻", "武清", "蓟县", "静海", "宁河", "营销", "公路", "恒实"]
+    domains = ["专卖", "营销", "物流", "办公室",  "综合计划", "内管",  "法规", "财务", "审计", "人事", "党建","纪检", "安全", "群团", "服务中心", "信息中心", "学会", "规范"]
     features = ["业务线上化","业务规范化","数据可视化","管理协同","系统对接"]
     return {"units": units, "domains": domains, "features": features}
 
@@ -123,8 +187,7 @@ def get_ranking(type: str = Query("comprehensive", description="排行榜类型�
     if type == "visits":
         apps = db.query(models.App).order_by(models.App.visits.desc()).limit(10).all()
     else:
-        # 综合榜：访问量和推广次数加权
-        apps = db.query(models.App).order_by((models.App.visits + models.App.promotion_times * 10).desc()).limit(10).all()
+        apps = db.query(models.App).order_by(models.App.data_amount.desc()).limit(10).all()
     return apps
 
 @app.get("/api/stats")
@@ -139,25 +202,18 @@ def get_stats(db: Session = Depends(get_db)):
         extract("month", models.App.created_at) == now.month
     ).count()
     
-    promotion_stats = db.query(func.sum(models.App.promotion_times)).scalar() or 0
-    total_promoted_apps = db.query(models.App).filter(models.App.promotion_times > 0).count()
-    visits_stats = db.query(func.sum(models.App.visits)).scalar() or 0
-    
-    # 计算上月日期范围
+    visits_total = db.query(func.sum(models.App.visits)).scalar() or 0
+    total_data_amount = db.query(func.sum(models.App.data_amount)).scalar() or 0
+
     first_day_of_current_month = now.replace(day=1)
     last_day_of_last_month = first_day_of_current_month - pd.Timedelta(days=1)
-    first_day_of_last_month = last_day_of_last_month.replace(day=1)
-    
-    # 上月访问次数（求和）
-    last_month_visits = db.query(func.sum(models.AppDailyStat.visits)).filter(
-        models.AppDailyStat.stat_date >= first_day_of_last_month.date(),
-        models.AppDailyStat.stat_date <= last_day_of_last_month.date()
+    last_month_str = last_day_of_last_month.strftime("%Y-%m")
+
+    last_month_new_data_amount = db.query(models.MallMonthlyStat.new_data_amount).filter(
+        models.MallMonthlyStat.month == last_month_str
     ).scalar() or 0
-    
-    # 上月访问人数（求和）
-    last_month_visitors = db.query(func.sum(models.AppDailyStat.visitors)).filter(
-        models.AppDailyStat.stat_date >= first_day_of_last_month.date(),
-        models.AppDailyStat.stat_date <= last_day_of_last_month.date()
+    last_month_visitors = db.query(models.MallMonthlyStat.new_visitors).filter(
+        models.MallMonthlyStat.month == last_month_str
     ).scalar() or 0
     
     # 图表 1: 业务领域分布
@@ -186,10 +242,9 @@ def get_stats(db: Session = Depends(get_db)):
         "summary": {
             "total_apps": total_apps,
             "new_this_month": new_this_month,
-            "promotion_stats": promotion_stats,
-            "total_promoted_apps": total_promoted_apps,
-            "visits_stats": visits_stats,
-            "last_month_visits": last_month_visits,
+            "data_total": total_data_amount,
+            "last_month_new_data": last_month_new_data_amount,
+            "visits_total": visits_total,
             "last_month_visitors": last_month_visitors
         },
         "charts": {
@@ -198,3 +253,32 @@ def get_stats(db: Session = Depends(get_db)):
             "new_trend": trend_data
         }
     }
+
+@app.post("/api/upload")
+async def upload_data(file: UploadFile = File(...), user: str = Depends(_require_user)):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    filename = file.filename or ""
+    if not filename.lower().endswith(".xlsx"):
+        raise HTTPException(status_code=400, detail="仅支持 .xlsx 文件")
+
+    with open(LATEST_EXCEL_PATH, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    db = SessionLocal()
+    try:
+        try:
+            db.query(models.MallMonthlyStat).delete()
+            db.query(models.App).delete()
+            db.commit()
+        except Exception:
+            db.rollback()
+            Base.metadata.drop_all(bind=engine)
+            Base.metadata.create_all(bind=engine)
+
+        _seed_from_excel(LATEST_EXCEL_PATH, db)
+        db.commit()
+        apps_count = db.query(models.App).count()
+        monthly_count = db.query(models.MallMonthlyStat).count()
+        return {"message": "上传成功，数据库已刷新", "apps": apps_count, "monthly_stats": monthly_count}
+    finally:
+        db.close()

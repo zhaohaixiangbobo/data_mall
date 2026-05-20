@@ -4,3 +4,6 @@ sqlalchemy
 pandas
 openpyxl
 pydantic
+python-multipart
+python-jose[cryptography]
+python-dotenv

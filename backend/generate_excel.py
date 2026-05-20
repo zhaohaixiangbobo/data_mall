@@ -1,11 +1,12 @@
 import pandas as pd
 from datetime import datetime, timedelta, date
 import random
+import os
 
 def generate_excel():
     """生成带有模拟数据的 Excel 模板文件"""
-    domains = ["专卖", "营销", "物流", "办公室",  "综合计划", "内管",  "法规", "财务", "审计", "人事", "党建", "安全", "群团", "服务中心", "信息中心", "学会", "规范"]
-    units = ["市局", "一局", "二局", "三局", "东丽", "西青", "津南", "北辰", "滨海", "宝坻", "武清", "蓟县", "静海", "宁河"]
+    domains = ["专卖", "营销", "物流", "办公室",  "综合计划", "内管",  "法规", "财务", "审计", "人事", "党建","纪检", "安全", "群团", "服务中心", "信息中心", "学会", "规范"]
+    units = ["市局", "一局", "二局", "三局", "东丽", "西青", "津南", "北辰", "滨海", "宝坻", "武清", "蓟县", "静海", "宁河", "营销", "公路", "恒实"]
     values = ["业务线上化","业务规范化","数据可视化","管理协同","系统对接"]
 
     app_data = []
@@ -24,41 +25,33 @@ def generate_excel():
             "img_url": f"https://picsum.photos/seed/{i}/200",
             "link": f"https://example.com/app/{i}",
             "features": ",".join(random.sample(values, random.randint(1, len(values)))),
-            "visits": 0, # 将由明细数据汇总
-            "promotion_times": random.randint(0, 50),
+            "visits": random.randint(20_000, 500_000),
+            "data_amount": random.randint(1_000_000, 9_000_000),
             "created_at": (now - timedelta(days=random.randint(0, 360))).strftime("%Y-%m-%d %H:%M:%S")
         })
         
     df_apps = pd.DataFrame(app_data)
     
-    # 生成每日访问数据
-    daily_stats_data = []
-    # 选取最近两个月的数据，比如 60 天
-    for app in app_data:
-        created_date = datetime.strptime(app["created_at"], "%Y-%m-%d %H:%M:%S").date()
-        total_visits = 0
-        for day_offset in range(60):
-            current_date = now.date() - timedelta(days=day_offset)
-            if current_date >= created_date:
-                daily_visits = random.randint(0, 100)
-                daily_visitors = int(daily_visits * random.uniform(0.5, 0.9))
-                total_visits += daily_visits
-                daily_stats_data.append({
-                    "app_id": app["id"],
-                    "stat_date": current_date.strftime("%Y-%m-%d"),
-                    "visits": daily_visits,
-                    "visitors": daily_visitors
-                })
-        
-        app["visits"] = total_visits
+    # 生成月度数据：月份、新增数据量、新增访问人数
+    monthly_stats_data = []
+    first_day_of_current_month = now.replace(day=1)
+    for i in range(11, -1, -1):
+        target_date = first_day_of_current_month - pd.DateOffset(months=i)
+        month_str = target_date.strftime("%Y-%m")
+        monthly_stats_data.append({
+            "month": month_str,
+            "new_data_amount": random.randint(1_000_000, 9_000_000),
+            "new_visitors": random.randint(50_000, 300_000),
+        })
+    df_monthly_stats = pd.DataFrame(monthly_stats_data)
     
-    # 更新 app_data 中的 visits
-    df_apps = pd.DataFrame(app_data)
-    df_daily_stats = pd.DataFrame(daily_stats_data)
-    
-    with pd.ExcelWriter("d:/2-code/mall/import_template_v3.xlsx", engine="openpyxl") as writer:
+    output_dir = os.path.join(os.path.dirname(__file__), "data")
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, "import_template.xlsx")
+
+    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
         df_apps.to_excel(writer, sheet_name="apps", index=False)
-        df_daily_stats.to_excel(writer, sheet_name="daily_stats", index=False)
+        df_monthly_stats.to_excel(writer, sheet_name="monthly_stats", index=False)
         
     print("Excel generated successfully!")
 

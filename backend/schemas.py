@@ -11,7 +11,7 @@ class AppBase(BaseModel):
     link: Optional[str] = None
     features: Optional[str] = None
     visits: int = 0
-    promotion_times: int = 0
+    data_amount: int = 0
 
 class AppCreate(AppBase):
     pass

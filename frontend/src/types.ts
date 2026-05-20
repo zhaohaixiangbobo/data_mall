@@ -8,7 +8,7 @@ export interface AppData {
   link: string;
   features: string;
   visits: number;
-  promotion_times: number;
+  data_amount: number;
   created_at: string;
 }
 
@@ -22,10 +22,9 @@ export interface Stats {
   summary: {
     total_apps: number;
     new_this_month: number;
-    promotion_stats: number;
-    total_promoted_apps: number;
-    visits_stats: number;
-    last_month_visits: number;
+    data_total: number;
+    last_month_new_data: number;
+    visits_total: number;
     last_month_visitors: number;
   };
   charts: {
