@@ -55,10 +55,17 @@ def _require_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(
     except JWTError:
         raise HTTPException(status_code=401, detail="无效 Token")
 
+def _is_valid_import_excel(path: str) -> bool:
+    try:
+        xls = pd.ExcelFile(path)
+        return "apps" in xls.sheet_names
+    except Exception:
+        return False
+
 def _get_excel_path() -> Optional[str]:
-    if os.path.exists(LATEST_EXCEL_PATH):
+    if os.path.exists(LATEST_EXCEL_PATH) and _is_valid_import_excel(LATEST_EXCEL_PATH):
         return LATEST_EXCEL_PATH
-    if os.path.exists(DEFAULT_EXCEL_PATH):
+    if os.path.exists(DEFAULT_EXCEL_PATH) and _is_valid_import_excel(DEFAULT_EXCEL_PATH):
         return DEFAULT_EXCEL_PATH
     return None
 
@@ -217,11 +224,11 @@ def get_stats(db: Session = Depends(get_db)):
     ).scalar() or 0
     
     # 图表 1: 业务领域分布
-    domain_dist = db.query(models.App.domain, func.count(models.App.id)).group_by(models.App.domain).all()
+    domain_dist = db.query(models.App.domain, func.count(models.App.id)).group_by(models.App.domain).order_by(func.count(models.App.id).desc()).all()
     domain_data = [{"domain": r[0], "count": r[1]} for r in domain_dist]
     
     # 图表 2: 单位分布
-    unit_dist = db.query(models.App.unit, func.count(models.App.id)).group_by(models.App.unit).all()
+    unit_dist = db.query(models.App.unit, func.count(models.App.id)).group_by(models.App.unit).order_by(func.count(models.App.id).desc()).all()
     unit_data = [{"unit": r[0], "count": r[1]} for r in unit_dist]
     
     # 图表 3: 新增趋势（按月份，展示过去 12 个月的数据）
