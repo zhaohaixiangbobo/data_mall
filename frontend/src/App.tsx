@@ -14,7 +14,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 function App() {
   const [apps, setApps] = useState<AppData[]>([]);
   const [ranking, setRanking] = useState<AppData[]>([]);
-  const [rankingTab, setRankingTab] = useState<'comprehensive' | 'visits'>('comprehensive');
+  const [rankingTab, setRankingTab] = useState<'comprehensive' | 'visits'>('visits');
   const [filters, setFilters] = useState<Filters>({ units: [], domains: [], features: [] });
   const [stats, setStats] = useState<Stats | null>(null);
 
@@ -73,12 +73,12 @@ function App() {
         setLoading(false);
       }
     };
-    
+
     // 简单的防抖处理搜索输入
     const timer = setTimeout(() => {
       fetchApps();
     }, 300);
-    
+
     return () => clearTimeout(timer);
   }, [selectedUnit, selectedDomain, selectedFeature, searchQuery]);
 
@@ -107,7 +107,7 @@ function App() {
         <div className="absolute left-1/4 top-10 opacity-30 text-white text-5xl font-bold">#</div>
         <div className="absolute left-1/3 bottom-10 opacity-30 text-white text-5xl font-bold">&lt;/&gt;</div>
         <div className="absolute right-1/3 top-20 opacity-30 text-white text-5xl font-bold">%</div>
-        
+
         <div className="w-[98%] xl:w-[95%] max-w-[1800px] mx-auto h-full relative flex items-center justify-between">
           <div className="flex items-center space-x-4 z-10">
             <h1 className="text-4xl md:text-5xl font-bold tracking-widest text-white drop-shadow-md">
@@ -148,19 +148,19 @@ function App() {
                     <AppCard key={app.id} app={app} />
                   ))}
                 </div>
-                
+
                 {/* 分页控制区 */}
                 <div className="mt-4 flex items-center justify-end">
                   <div className="flex items-center space-x-4">
                     <div className="text-sm text-gray-500">
                       共 {apps.length} 个应用，当前 {currentPage}/{totalPages} 页
                     </div>
-                    
+
                     <div className="flex items-center space-x-2 ml-4">
                       <span className="text-sm text-gray-500">跳至</span>
-                      <input 
-                        type="number" 
-                        min={1} 
+                      <input
+                        type="number"
+                        min={1}
                         max={totalPages || 1}
                         placeholder={currentPage.toString()}
                         className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400 text-center"
@@ -178,14 +178,14 @@ function App() {
                     </div>
 
                     <div className="flex items-center space-x-2 ml-4">
-                      <button 
+                      <button
                         onClick={handlePrevPage}
                         disabled={currentPage === 1}
                         className="p-2 rounded-full bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors"
                       >
                         <ChevronLeft size={20} />
                       </button>
-                      <button 
+                      <button
                         onClick={handleNextPage}
                         disabled={currentPage === totalPages || totalPages === 0}
                         className="p-2 rounded-full bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors"
@@ -217,7 +217,7 @@ function App() {
           </div>
         )}
       </main>
-      
+
       {/* 底部 Banner 区域 */}
       <div className="relative w-full h-24 bg-gradient-to-r from-blue-300 via-cyan-200 to-blue-200 overflow-hidden shadow-sm mt-6">
         <div className="absolute left-10 top-1/2 -translate-y-1/2 opacity-20">
@@ -225,19 +225,19 @@ function App() {
         </div>
         <div className="absolute left-1/4 top-10 opacity-30 text-white text-5xl font-bold">#</div>
         <div className="absolute right-1/3 top-10 opacity-30 text-white text-5xl font-bold">%</div>
-        
+
         <div className="w-[98%] xl:w-[95%] max-w-[1800px] mx-auto h-full relative flex justify-center items-center">
-           <div className="flex space-x-12">
-             <div className="text-3xl font-bold text-white tracking-wider drop-shadow-md">搭好技术舞台</div>
-             <div className="text-3xl font-bold text-white tracking-wider drop-shadow-md">共唱数字好戏</div>
-           </div>
+          <div className="flex space-x-12">
+            <div className="text-3xl font-bold text-white tracking-wider drop-shadow-md">搭好技术舞台</div>
+            <div className="text-3xl font-bold text-white tracking-wider drop-shadow-md">共唱数字好戏</div>
+          </div>
         </div>
       </div>
 
       {/* 页脚 */}
       <footer className="bg-white py-4">
         <div className="w-[98%] xl:w-[95%] max-w-[1800px] mx-auto text-center text-sm text-gray-500">
-          <p>主管单位：天津市烟草烟草专卖局（公司）信息中心 联系地址：天津市和平区长春道20号</p> 
+          <p>主管单位：天津市烟草烟草专卖局（公司）信息中心 联系地址：天津市和平区长春道20号</p>
         </div>
       </footer>
     </div>

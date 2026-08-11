@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppData } from '../types';
-import { Trophy, Flame, TrendingUp } from 'lucide-react';
+import { Trophy, TrendingUp } from 'lucide-react';
 
 interface RankingListProps {
   apps: AppData[];
@@ -21,28 +21,14 @@ const RankingList: React.FC<RankingListProps> = ({ apps, currentTab, onTabChange
             <Trophy className="mr-2 w-5 h-5" /> 排行榜
           </h2>
         </div>
-        
-        {/* 更明显的 Tab 切换 */}
+
+        {/* Tab 切换（综合榜暂时隐藏，仅展示访问次数） */}
         <div className="flex bg-white/30 p-1 rounded-lg">
           <button
-            onClick={() => onTabChange('comprehensive')}
-            className={`flex-1 flex justify-center items-center py-1 text-sm font-medium rounded-md transition-all duration-300 ${
-              currentTab === 'comprehensive' 
-                ? 'bg-white text-teal-800 shadow-md transform scale-[1.02]' 
-                : 'text-teal-900 hover:bg-white/40'
-            }`}
-          >
-            <Flame className="w-4 h-4 mr-1" /> 综合榜
-          </button>
-          <button
             onClick={() => onTabChange('visits')}
-            className={`flex-1 flex justify-center items-center py-1 text-sm font-medium rounded-md transition-all duration-300 ${
-              currentTab === 'visits' 
-                ? 'bg-white text-teal-800 shadow-md transform scale-[1.02]' 
-                : 'text-teal-900 hover:bg-white/40'
-            }`}
+            className="flex-1 flex justify-center items-center py-1 text-sm font-medium rounded-md transition-all duration-300 bg-white text-teal-800 shadow-md transform scale-[1.02]"
           >
-            <TrendingUp className="w-4 h-4 mr-1" /> 访问榜
+            <TrendingUp className="w-4 h-4 mr-1" /> 访问次数
           </button>
         </div>
       </div>
@@ -57,9 +43,9 @@ const RankingList: React.FC<RankingListProps> = ({ apps, currentTab, onTabChange
 
             return (
               <li key={app.id}>
-                <a 
-                  href={app.link || '#'} 
-                  target="_blank" 
+                <a
+                  href={app.link || '#'}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between group py-2.5 px-3 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer block"
                 >
